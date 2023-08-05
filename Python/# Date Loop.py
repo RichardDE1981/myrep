@@ -18,6 +18,8 @@ PDate = date(date.today().year-1, 1,1)
 delta = Cdate-PDate
 #print(delta.days)
 
+#initialize
+
 new_date = (PDate + timedelta(days = 0))
 
 for x in range(delta.days):
