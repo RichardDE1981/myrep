@@ -89,12 +89,10 @@ if __name__ == "__main__":
     config_file = "C:\Python\Scripts\CurrencyRates\config.ini"
 
     # load param values loaded from ini-file - correct order dependant of output statement
-
     output_dir, url, api_key, file_nam = load_config(config_file)
 
     delta = get_diff_days()
     #print(x)
-
 
     #empty csv file
     try:
