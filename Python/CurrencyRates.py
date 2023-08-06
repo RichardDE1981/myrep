@@ -103,15 +103,15 @@ def load_config(file_path):
 def write_error_to_csv(ErrorType, ErrorDesc, Script, Section):
     # Define the CSV file path
     csv_file = output_dir+error_log
-
+    lDate = dt.now().date().strftime("%Y-%m-%d")
     # Check if the file exists, if not, create and add the header
-    header = ["ID", "ErrorType", "ErrorDesc", "Script", "Section"]
+    header = ["ID","Date", "ErrorType", "ErrorDesc", "Script", "Section"]
     try:
         with open(csv_file, mode='r') as file:
             pass
     except FileNotFoundError:
         with open(csv_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
+            writer = csv.writer(file, delimiter=';')
             writer.writerow(header)
 
     # Read the last ID from the file or set it to 0 if the file is empty
@@ -126,7 +126,7 @@ def write_error_to_csv(ErrorType, ErrorDesc, Script, Section):
     new_id = last_id + 1
 
     # Prepare the error data as a list
-    error_data = [new_id, ErrorType, ErrorDesc, Script, Section]
+    error_data = [new_id,lDate, ErrorType, ErrorDesc, Script, Section]
 
     # Append the error data to the CSV file
     with open(csv_file, mode='a', newline='') as file:
