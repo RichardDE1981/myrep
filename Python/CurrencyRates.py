@@ -5,7 +5,10 @@
 ############################################
 
 
-import requests, configparser
+import requests
+import configparser
+import csv
+from datetime import datetime as dt
 import pandas as pd
 from datetime import date, timedelta
 
@@ -26,7 +29,12 @@ def get_exchange_rates(endpoint_url, api_key, date):
         response.raise_for_status()  # Raises an exception for 4xx and 5xx status codes
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"An error occurred: {e}")
+        #print(f"An error occurred: {e}")
+        ErrorType = "load API data"
+        ErrorDesc = str(e)
+        Script = __file__
+        Section = "get_exchange_rates"
+        write_error_to_csv(ErrorType, ErrorDesc, Script, Section)
         return None
     
 #defining CSV Export
@@ -37,41 +45,93 @@ def export_to_csv(data_frame, file_name, output_dir):
         data_frame.to_csv(file_path,mode='a', sep=';', index=False)
         #print(f"Data exported to '{file_path}' successfully.")
     except Exception as e:
-        print(f"An error occurred while exporting to CSV: {e}")
+        #print(f"An error occurred while exporting to CSV: {e}")
+         # Use the write_error_to_csv function to log the error
+        ErrorType = "ExportError"
+        ErrorDesc = str(e)
+        Script = __file__
+        Section = "export_to_csv"
+        write_error_to_csv(ErrorType, ErrorDesc, Script, Section)
 
 #defining date-range
 
 def get_diff_days():
     try:    
         
-        Cdate = date(date.today().year, date.today().month, date.today().day)
-        #PDate = date(date.today().year-1, 1,1)
-        PDate = date(date.today().year, date.today().month, date.today().day-4)
+        Cdate = dt.now().date()
 
-        delta = Cdate-PDate
-        return(delta.days)
+        Pdate = Cdate - timedelta(days=6)
+
+        delta = (Cdate - Pdate).days
+        return(int(delta))
     except Exception as e:
         print(f"An error occurred while generating timeframe: {e}")
+        ErrorType = "create date range"
+        ErrorDesc = str(e)
+        Script = __file__
+        Section = "get_diff_days"
+        write_error_to_csv(ErrorType, ErrorDesc, Script, Section)
         return None
 
 # defining INI-read
 
 def load_config(file_path):
-    config = configparser.ConfigParser()
-    config.read(file_path)
+    try:                
+        config = configparser.ConfigParser()
+        config.read(file_path)
     
-    if 'settings' in config:
-        settings = config['settings']
-        output_dir = settings.get('output_dir', '')
-        url = settings.get('url', '')
-        api_key = settings.get('api_key', '')
-        file_nam = settings.get('file_nam', '')
-        
-        return output_dir, url, api_key, file_nam
-    else:
-        raise ValueError('No [settings] section found in the config file.')
+        if 'settings' in config:
+            settings = config['settings']
+            output_dir = settings.get('output_dir', '')
+            url = settings.get('url', '')
+            api_key = settings.get('api_key', '')
+            file_nam = settings.get('file_nam', '')
+            error_log = settings.get('error_log', '')
 
+            return output_dir, url, api_key, file_nam, error_log
+        else:
+            return None
+    except Exception as e:
+        ErrorType = "read INI file"
+        ErrorDesc = str(e)
+        Script = __file__
+        Section = "get_diff_days"
+        write_error_to_csv(ErrorType, ErrorDesc, Script, Section)
 
+# define write error-log to csv file
+
+def write_error_to_csv(ErrorType, ErrorDesc, Script, Section):
+    # Define the CSV file path
+    csv_file = output_dir+error_log
+
+    # Check if the file exists, if not, create and add the header
+    header = ["ID", "ErrorType", "ErrorDesc", "Script", "Section"]
+    try:
+        with open(csv_file, mode='r') as file:
+            pass
+    except FileNotFoundError:
+        with open(csv_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
+
+    # Read the last ID from the file or set it to 0 if the file is empty
+    try:
+        with open(csv_file, mode='r') as file:
+            reader = csv.reader(file)
+            last_id = max([int(row[0]) for row in reader])
+    except ValueError:
+        last_id = 0
+
+    # Increment the ID for the new error entry
+    new_id = last_id + 1
+
+    # Prepare the error data as a list
+    error_data = [new_id, ErrorType, ErrorDesc, Script, Section]
+
+    # Append the error data to the CSV file
+    with open(csv_file, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(error_data)
 
 ############################################
 #
@@ -89,10 +149,10 @@ if __name__ == "__main__":
     config_file = "C:\Python\Scripts\CurrencyRates\config.ini"
 
     # load param values loaded from ini-file - correct order dependant of output statement
-    output_dir, url, api_key, file_nam = load_config(config_file)
+    output_dir, url, api_key, file_nam, error_log = load_config(config_file)
 
     delta = get_diff_days()
-    #print(x)
+    
 
     #empty csv file
     try:
@@ -103,8 +163,7 @@ if __name__ == "__main__":
         print(f"An error occurred while clearing CSV File: {filename} {e}")
 
     # defining today´s date as first day of which currency rate is loaded
-    ExtractDate =date.today()
-    
+    ExtractDate =date.today()    
 
     for i in range(delta):
 
